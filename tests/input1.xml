@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test>
+    <title>Title</title>
+    <element a="a" b="b">Content 1</element>
+    <element>Content 2</element>
+</test>

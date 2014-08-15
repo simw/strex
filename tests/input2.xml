@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+  <title>Feed Title</title>
+  <subtitle/>
+  <icon>http://www.example.com/icon.png</icon>
+  <updated>2014-08-15T15:00:00-00:00</updated>
+  <id>ID</id>
+  <link type="text/html" href="http://www.example.com/link" rel="alternate"/>
+  <entry>
+    <published>2014-08-15T15:00:00-00:00</published>
+    <updated>2014-08-15T15:00:00-00:00</updated>
+    <title>Entry 1</title>
+    <content type="html">  
+      This is content 1.
+    </content>
+    <link rel="alternate" type="text/html" href="http://www.example.com/alt-link"/>
+    <id>ID-1</id>
+    <author>
+      <name>simw</name>
+    </author>
+  </entry>
+  <entry>
+    <published>2014-08-15T15:00:00-00:00</published>
+    <updated>2014-08-15T15:00:00-00:00</updated>
+    <title>Entry 2</title>
+    <content type="html">  
+      This is content 2.
+    </content>
+    <link rel="alternate" type="text/html" href="http://www.example.com/alt-link"/>
+    <id>ID-1</id>
+    <author>
+      <name>simw</name>
+    </author>
+  </entry>
+  <entry>
+    <published>2014-08-15T15:00:00-00:00</published>
+    <updated>2014-08-15T15:00:00-00:00</updated>
+    <title>Entry 3</title>
+    <content type="html">  
+      This is content 3.
+    </content>
+    <link rel="alternate" type="text/html" href="http://www.example.com/alt-link"/>
+    <id>ID-1</id>
+    <author>
+      <name>simw</name>
+    </author>
+  </entry>
+</feed>

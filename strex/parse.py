@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 
 from lxml import etree, html
+from cssselect import GenericTranslator
+
 import collections
 
 default_options = {
@@ -11,71 +13,15 @@ default_options = {
     'remove_whitespace': True
 }
 
-
-""" 
-Supply:
-    TODO: add wildcards and recursion to structure ?
-
-    options and structure
-
-    options = {
-        'parser': 'html'
-        'listtype': 'xpath' or 'css',
-        'itemtype': 'xpath' or 'regexp',
-        'namespaces': (optional) dictionary of xpath namespaces
-    }
-    
-    eg0 single item
-    structure = '//title'
-
-    eg0.1 single item
-    structure = {
-        _item: '//title'
-    }
-    
-    eg1 flat structure
-    structure = {
-        'link': 'a:id/text()',
-        'published_date': 'a:published/text()'
-    }
-
-    eg2 flat structure - expanded
-    structure = {
-        'link': {
-            '_item': 'a:id/text()'
-        },
-        'published_date': {
-            '_item': 'a:published/text()'
-        }
-    }
-
-    eg3 single list
-    structure = {
-        'links': {
-            '_list': 'a',
-            '_item': '@href'
-        }
-    }
-
-    eg4 single list with substructure
-    structure = {
-        'sites': {
-            '_list': 'a',
-            '_item': {
-                'url': '@href'
-                'title': 'text()'
-            }
-        }
-    }
-
-"""
-
 # TODO: 
 # 1) Add regular expression parser
 # 2) Convert XPath to compiled lxml expression
 # 3) be more careful about unicode encoding for lxml (?)
 # 4) be more careful with exceptions for corner cases:
 #    a) xpath returns a list instead of a string
+# 5) add named recursion
+# 6) add option to ignore blanks (after stripping whitespace)
+
 
 def extract_structure(doc, structure, options):
 
@@ -95,13 +41,16 @@ def extract_structure(doc, structure, options):
             structure['_item'] = 'text()' 
 
         if options['list_type'].lower() == 'xpath':
-            subdocs = doc.xpath(structure.get('_list'), namespaces=options['namespaces'])
+            xp = etree.XPath(structure.get('_list'), namespaces=options['namespaces'])           
+            # subdocs = doc.xpath(structure.get('_list'), namespaces=options['namespaces'])
         elif options['list_type'].lower() == 'css':
-            subdocs = doc.cssselect(structure.get('_list'))
+            xp = etree.XPath(GenericTranslator().css_to_xpath(structure.get('_list')))
+            # subdocs = doc.cssselect(structure.get('_list'))
         else:
             raise Exception('extract_structure: ' + options['list_type'] + ' not a valid ' +
                 'list type')
-         
+        subdocs = xp(doc)
+
         # If the xpath isn't set up correclty, then this might return a string
         # instead of a list of nodes
         if isinstance(subdocs, basestring):
