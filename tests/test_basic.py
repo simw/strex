@@ -75,10 +75,11 @@ class TestRegexpStrex:
 
     def test_list(self, input1):
         st = Parser(None, 'regexp')
+        print(input1)
+        print(re_struct3)
         res = st.parse(re_struct3, input1)
-        assert(len(res) == 2)
-        assert(res[0] == 'Content 1')
-        assert(res[1] == 'Content 2')
+        print(res)
+        assert(res == ['Content 1', 'Content 2'])
 
 @pytest.mark.usefixtures('input1')
 class TestLxmlStrex:

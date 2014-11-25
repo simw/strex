@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 
 import pytest
 from strex.parse import Parser
-from strex.addins.httpget import httpget
+from strex.addins.http_requests import GetWare
 
 doc1 = 'http://www.google.com'
 
@@ -40,16 +40,23 @@ struct2 = {
     }
 }
 
+struct3 = {
+    '_list': '(.+)\s',
+    '_item': ''
+}
+
+# struct4 = ('[]', '(.+)\s')
+
 class TestStrexHttpGet:
     def test_basic(self):
         st = Parser(None, 'regexp')
-        st.use('_httpget', httpget, None)
+        st.use('_httpget', GetWare)
         res = st.parse(struct1, doc1)
         assert(res == 'Google')
 
     def test_list(self):
         st = Parser(None, 'regexp')
-        st.use('_httpget', httpget, None)
+        st.use('_httpget', GetWare)
         res = st.parse(struct2, doc2)
         print(res)
         assert(res == ['Google', 'Bing', 'Yahoo'])

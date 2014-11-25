@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from collections import Iterable, Mapping
 from six import string_types
 
-from strex.addins.basic_addins import item_structure, list_structure
+from strex.addins.basic_addins import ItemWare, ListWare
 from strex.query_engines.xpath import XpathEngine
 from strex.query_engines.regexp import RegexpEngine
 
@@ -17,31 +17,44 @@ from strex.query_engines.regexp import RegexpEngine
 # 6) add option to ignore blanks (after stripping whitespace)
 # 7) what happens if extract_structure returns an object?
 
-query_engines = {
+default_query_engine_list = {
     'xpath': XpathEngine,
     'regexp': RegexpEngine
 }
 
+DEFAULT_QUERY_ENGINE = 'xpath'
+
+default_wares_list = [
+    ('_list', ListWare),
+    ('_item', ItemWare)
+]
+
 class Parser(object):
-    def __init__(self, options, query_engine='xpath'):
-        # Set up the query engine
-        self.engine = None
-        if query_engine not in query_engines:
-            raise Exception('Query Engine {0} does not exist'.format(query_engine))
-        self.set_engine(query_engines[query_engine], options)
+    def __init__(self, options, query_engine=DEFAULT_QUERY_ENGINE):
+        self.set_engine(query_engine, options)
         
-        # Setup the addins
+        # Setup the default addins
         self.wares = []
-        self.use('_list', list_structure, options)
-        self.use('_item', item_structure, options)
+        for (k, v) in default_wares_list:
+            self.use(k, v, options)
 
-    def set_engine(self, QueryEngine, options):
-        self.engine = QueryEngine(options)
+    def set_engine(self, query_engine, options=None):
+        self.engine = None
+        if isinstance(query_engine, string_types):
+            if query_engine not in default_query_engine_list: 
+                raise Exception('Query Engine {0} does not exist'.format(query_engine))
+            self.engine = default_query_engine_list[query_engine](options)
 
-    def use(self, tag, fn, options):
+        else:
+            if not query_engine.get('get_doc') or not query_engine.get('run_query'):
+                raise Exception('Query Engine object not understood')
+            self.engine = query_engine(options)
+
+    def use(self, tag, ware, options=None):
+        this_ware = ware(tag, options)
         self.wares.append({
             'tag': tag,
-            'fn': fn
+            'ware': this_ware
         })
 
     def extract_structure(self, structure, doc):
@@ -52,7 +65,7 @@ class Parser(object):
         # iterate through added processing options
         for ware in self.wares:
             if ware['tag'] in structure:
-                return ware['fn'](self, structure, doc)
+                return ware['ware'].run(self, structure, doc)
 
         # if structure is an iterable type, then recur
         if isinstance(structure, Iterable):
