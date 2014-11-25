@@ -1,106 +1,83 @@
+
 from __future__ import unicode_literals
 
-from lxml import etree, html
-from cssselect import GenericTranslator
+from collections import Iterable, Mapping
+from six import string_types
 
-import collections
-
-default_options = {
-    'parser': 'html',
-    'list_type': 'xpath',
-    'item_type': 'xpath',
-    'namespaces': None,
-    'remove_whitespace': True
-}
+from strex.addins.basic_addins import item_structure, list_structure
+from strex.query_engines.xpath import XpathEngine
+from strex.query_engines.regexp import RegexpEngine
 
 # TODO: 
-# 1) Add regular expression parser
 # 2) Convert XPath to compiled lxml expression
 # 3) be more careful about unicode encoding for lxml (?)
 # 4) be more careful with exceptions for corner cases:
 #    a) xpath returns a list instead of a string
 # 5) add named recursion
 # 6) add option to ignore blanks (after stripping whitespace)
+# 7) what happens if extract_structure returns an object?
 
+query_engines = {
+    'xpath': XpathEngine,
+    'regexp': RegexpEngine
+}
 
-def extract_structure(doc, structure, options):
-
-    # if structure is a string, then process
-    if isinstance(structure, basestring):
-        res = doc.xpath(structure, namespaces=options['namespaces'])
-        if not isinstance(res, basestring):
-            res = ' '.join(res)
-        if options.get('remove_whitespace'):
-            res = res.strip()
-        return res
-    
-    # if structure has an attribute '_item', then process that
-    if '_list' in structure: 
-        res = []
-        if not '_item' in structure: 
-            structure['_item'] = 'text()' 
-
-        if options['list_type'].lower() == 'xpath':
-            xp = etree.XPath(structure.get('_list'), namespaces=options['namespaces'])           
-            # subdocs = doc.xpath(structure.get('_list'), namespaces=options['namespaces'])
-        elif options['list_type'].lower() == 'css':
-            xp = etree.XPath(GenericTranslator().css_to_xpath(structure.get('_list')))
-            # subdocs = doc.cssselect(structure.get('_list'))
-        else:
-            raise Exception('extract_structure: ' + options['list_type'] + ' not a valid ' +
-                'list type')
-        subdocs = xp(doc)
-
-        # If the xpath isn't set up correclty, then this might return a string
-        # instead of a list of nodes
-        if isinstance(subdocs, basestring):
-            raise Exception('Expression ' + structure.get('_list') + ' produced a string ' +
-                ' instead of a list of nodes: ' + subdocs)
-
-        for subdoc in subdocs:
-            if isinstance(subdoc, basestring):
-                raise Exception('Expression ' + structure.get('_list') + ' produced a string ' +
-                    ' as an element instead of a node: ' + subdoc)
-            res.append(extract_structure(subdoc, structure.get('_item'), options))
-        return res
-
-    # if object has an _item, then treat this as if it was simply a string
-    # (having excluded the list possibility above)
-    if '_item' in structure:
-        return extract_structure(doc, structure.get('_item'), options)
+class Parser(object):
+    def __init__(self, options, query_engine='xpath'):
+        # Set up the query engine
+        self.engine = None
+        if query_engine not in query_engines:
+            raise Exception('Query Engine {0} does not exist'.format(query_engine))
+        self.set_engine(query_engines[query_engine], options)
         
-    # if structure is some other type, then recur
-    if isinstance(structure, collections.Iterable):
-        if isinstance(structure, collections.Mapping):
-            # Is dictionary-like
-            res = {}
-            for k, v in structure.items():
-                res[k] = extract_structure(doc, v, options)
+        # Setup the addins
+        self.wares = []
+        self.use('_list', list_structure, options)
+        self.use('_item', item_structure, options)
+
+    def set_engine(self, QueryEngine, options):
+        self.engine = QueryEngine(options)
+
+    def use(self, tag, fn, options):
+        self.wares.append({
+            'tag': tag,
+            'fn': fn
+        })
+
+    def extract_structure(self, structure, doc):
+        # if structure is a string, then pass to query engine
+        if isinstance(structure, string_types): 
+            return self.engine.run_query(structure, doc)
+
+        # iterate through added processing options
+        for ware in self.wares:
+            if ware['tag'] in structure:
+                return ware['fn'](self, structure, doc)
+
+        # if structure is an iterable type, then recur
+        if isinstance(structure, Iterable):
+            if isinstance(structure, Mapping):
+                # Is dictionary-like
+                res = {}
+                for k, v in structure.items():
+                    res[k] = self.extract_structure(v, doc)
+            else:
+                # Is list-like
+                res = []
+                for v in structure:
+                    res.append(self.extract_structure(v, doc))
+            
+            return res
+
+        # all supported options are above and include a return statement
+        # hence, if we get here then the structure hasn't been understood
+        raise Exception('extract_structure: unknown type in structure tree ({0})\
+            , should be string, dictionary or list'.format(type(structure)))
+
+    def parse(self, structure, page, error_for_missing=False):
+        if page:
+            doc = self.engine.get_doc(page)
         else:
-            # Is list-like
-            res = []
-            for v in structure:
-                res.append(extract_structure(doc, v, options))
-        
-        return res
-
-
-def parse(page, structure, options, absolute_links_base=None, error_for_missing=False):
-    # Merge with default_options supplied above
-    default_options.update(options)
-    options = default_options
-
-    # Only pass utf-8 encoded string to lxml
-    # In python2, it wants bytes not (unicode) string
-    if options['parser'].upper() == 'HTML':
-        doc = html.document_fromstring(page.encode('utf-8'))
-        if absolute_links_base:
-            doc.make_links_absolute(absolute_links_base)
-    elif options['parser'].upper() == 'XML':
-        doc = etree.fromstring(page.encode('utf-8'))
-    else:
-        raise Exception('parse function: Unknown format for the page: ' + page_format)
-
-    # Now, have an lxml object in doc - now convert to given structure
-    return extract_structure(doc, structure, options)
+            doc = None
+        return self.extract_structure(structure, doc)
 
