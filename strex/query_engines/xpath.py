@@ -17,7 +17,7 @@ default_options = {
 }
 
 class XpathEngine(object):
-    def __init__(self, options):
+    def __init__(self, options=None):
         # Merge with default_options supplied above
         if options:
             default_options.update(options)

@@ -1,5 +1,6 @@
 
 from __future__ import unicode_literals
+from __future__ import absolute_import
 
 from collections import Iterable, Mapping
 from six import string_types
@@ -7,6 +8,7 @@ from six import string_types
 from strex.addins.basic_addins import ItemWare, ListWare
 from strex.query_engines.xpath import XpathEngine
 from strex.query_engines.regexp import RegexpEngine
+from strex.query_engines.jsonpath import JsonEngine
 
 # TODO: 
 # 2) Convert XPath to compiled lxml expression
@@ -19,6 +21,7 @@ from strex.query_engines.regexp import RegexpEngine
 
 default_query_engine_list = {
     'xpath': XpathEngine,
+    'json': JsonEngine,
     'regexp': RegexpEngine
 }
 
@@ -46,8 +49,8 @@ class Parser(object):
             self.engine = default_query_engine_list[query_engine](options)
 
         else:
-            if not query_engine.get('get_doc') or not query_engine.get('run_query'):
-                raise Exception('Query Engine object not understood')
+            # if not query_engine.get('get_doc') or not query_engine.get('run_query'):
+            #     raise Exception('Query Engine object not understood')
             self.engine = query_engine(options)
 
     def use(self, tag, ware, options=None):

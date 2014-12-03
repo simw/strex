@@ -19,7 +19,9 @@ setup(
     
     install_requires=[
         'lxml >= 3.3.0',
+        'cssselect >= 0.9.0',
         'requests >= 2.4.0',
+        'six >= 1.8.0'
     ],
 
     extras_require = {
